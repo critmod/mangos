@@ -5780,15 +5780,28 @@ void Spell::EffectMomentMove(uint32 i)
     if(unitTarget->isInFlight())
         return;
 
-    if( m_spellInfo->rangeIndex == 1)                       //self range
+    float dis = GetSpellRadius(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[i]));
+    float fx = m_caster->GetPositionX() + dis * cos(m_caster->GetOrientation());
+    float fy = m_caster->GetPositionY() + dis * sin(m_caster->GetOrientation());
+    // teleport a bit above terrain level to avoid falling below it
+    float fz = MapManager::Instance().GetBaseMap(m_caster->GetMapId())->GetHeight(fx,fy,m_caster->GetPositionZ(),true);
+    if(fz <= INVALID_HEIGHT)                    // note: this also will prevent use effect in instances without vmaps height enabled
+        return;
+
+    float caster_pos_z = m_caster->GetPositionZ();
+    // Control the caster to not climb or drop when +-fz > 8
+    if(!(fz<=caster_pos_z+8 && fz>=caster_pos_z-8))
+        return;
+
+    if( m_spellInfo->rangeIndex == 1)                        //self range
     {
         float dis = GetSpellRadius(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[i]));
 
         // before caster
-        float fx, fy, fz;
-        unitTarget->GetClosePoint(fx, fy, fz, unitTarget->GetObjectSize(), dis);
-        float ox, oy, oz;
-        unitTarget->GetPosition(ox, oy, oz);
+        float fx,fy,fz;
+        unitTarget->GetClosePoint(fx,fy,fz,unitTarget->GetObjectSize(), dis);
+        float ox,oy,oz;
+        unitTarget->GetPosition(ox,oy,oz);
 
         float fx2, fy2, fz2;                                // getObjectHitPos overwrite last args in any result case
         if(VMAP::VMapFactory::createOrGetVMapManager()->getObjectHitPos(unitTarget->GetMapId(), ox,oy,oz+0.5, fx,fy,oz+0.5,fx2,fy2,fz2, -0.5))
