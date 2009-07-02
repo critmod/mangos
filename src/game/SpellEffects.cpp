@@ -5798,10 +5798,10 @@ void Spell::EffectMomentMove(uint32 i)
         float dis = GetSpellRadius(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[i]));
 
         // before caster
-        float fx,fy,fz;
-        unitTarget->GetClosePoint(fx,fy,fz,unitTarget->GetObjectSize(), dis);
-        float ox,oy,oz;
-        unitTarget->GetPosition(ox,oy,oz);
+        float fx, fy, fz;
+        unitTarget->GetClosePoint(fx, fy, fz, unitTarget->GetObjectSize(), dis);
+        float ox, oy, oz;
+        unitTarget->GetPosition(ox, oy, oz);
 
         float fx2, fy2, fz2;                                // getObjectHitPos overwrite last args in any result case
         if(VMAP::VMapFactory::createOrGetVMapManager()->getObjectHitPos(unitTarget->GetMapId(), ox,oy,oz+0.5, fx,fy,oz+0.5,fx2,fy2,fz2, -0.5))
