@@ -5793,7 +5793,7 @@ void Spell::EffectMomentMove(uint32 i)
     if(!(fz<=caster_pos_z+8 && fz>=caster_pos_z-8))
         return;
 
-    if( m_spellInfo->rangeIndex == 1)                         //self range
+    if( m_spellInfo->rangeIndex == 1)                       //self range
     {
         float dis = GetSpellRadius(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[i]));
 
