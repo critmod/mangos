@@ -5800,7 +5800,7 @@ void Spell::EffectMomentMove(uint32 i)
 
         if(unitTarget->GetTypeId() == TYPEID_PLAYER)
         {
-            fz = MapManager::Instance().GetBaseMap(m_caster->GetMapId())->GetHeight(fx,fy,fz,true);
+            fz = m_caster->GetBaseMap()->GetHeight(fx,fy,fz,true);
             if (fabs(fz-oz) > 4.0f)
             {
                 fx = ox;
