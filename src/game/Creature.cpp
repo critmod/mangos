@@ -153,7 +153,7 @@ void Creature::RemoveFromWorld()
 
 void Creature::RemoveCorpse()
 {
-    if( getDeathState()!=CORPSE && !m_isDeadByDefault || getDeathState()!=ALIVE && m_isDeadByDefault )
+    if ((getDeathState() != CORPSE && !m_isDeadByDefault) || (getDeathState() != ALIVE && m_isDeadByDefault))
         return;
 
     m_deathTimer = 0;
@@ -444,7 +444,7 @@ void Creature::Update(uint32 diff)
 
             RegenerateMana();
 
-            m_regenTimer = 2000;
+            m_regenTimer = REGEN_TIME_FULL;
             break;
         }
         case DEAD_FALLING:
@@ -563,8 +563,8 @@ bool Creature::AIM_Initialize()
 
 bool Creature::Create (uint32 guidlow, Map *map, uint32 phaseMask, uint32 Entry, uint32 team, const CreatureData *data)
 {
-    SetMapId(map->GetId());
-    SetInstanceId(map->GetInstanceId());
+    ASSERT(map);
+    SetMap(map);
     SetPhaseMask(phaseMask,false);
 
     //oX = x;     oY = y;    dX = x;    dY = y;    m_moveTime = 0;    m_startMove = 0;
@@ -572,6 +572,12 @@ bool Creature::Create (uint32 guidlow, Map *map, uint32 phaseMask, uint32 Entry,
 
     if (bResult)
     {
+        //Notify the map's instance data.
+        //Only works if you create the object in it, not if it is moves to that map.
+        //Normally non-players do not teleport to other maps.
+        if(map->IsDungeon() && ((InstanceMap*)map)->GetInstanceData())
+            ((InstanceMap*)map)->GetInstanceData()->OnCreatureCreate(this);
+
         switch (GetCreatureInfo()->rank)
         {
             case CREATURE_ELITE_RARE:
@@ -1312,15 +1318,6 @@ bool Creature::CreateFromProto(uint32 guidlow, uint32 Entry, uint32 team, const 
     if(!UpdateEntry(Entry, team, data))
         return false;
 
-    //Notify the map's instance data.
-    //Only works if you create the object in it, not if it is moves to that map.
-    //Normally non-players do not teleport to other maps.
-    Map *map = MapManager::Instance().FindMap(GetMapId(), GetInstanceId());
-    if(map && map->IsDungeon() && ((InstanceMap*)map)->GetInstanceData())
-    {
-        ((InstanceMap*)map)->GetInstanceData()->OnCreatureCreate(this);
-    }
-
     return true;
 }
 
@@ -1462,10 +1459,10 @@ float Creature::GetAttackDistance(Unit const* pl) const
     if(aggroRate==0)
         return 0.0f;
 
-    int32 playerlevel   = pl->getLevelForTarget(this);
-    int32 creaturelevel = getLevelForTarget(pl);
+    uint32 playerlevel   = pl->getLevelForTarget(this);
+    uint32 creaturelevel = getLevelForTarget(pl);
 
-    int32 leveldif       = playerlevel - creaturelevel;
+    int32 leveldif       = int32(playerlevel) - int32(creaturelevel);
 
     // "The maximum Aggro Radius has a cap of 25 levels under. Example: A level 30 char has the same Aggro Radius of a level 5 char on a level 60 mob."
     if ( leveldif < - 25)
@@ -1733,7 +1730,7 @@ bool Creature::IsVisibleInGridForPlayer(Player* pl) const
     {
         if(GetCreatureInfo()->flags_extra & CREATURE_FLAG_EXTRA_INVISIBLE)
             return false;
-        return isAlive() || m_deathTimer > 0 || m_isDeadByDefault && m_deathState==CORPSE;
+        return (isAlive() || m_deathTimer > 0 || (m_isDeadByDefault && m_deathState == CORPSE));
     }
 
     // Dead player see live creatures near own corpse
@@ -1820,6 +1817,10 @@ bool Creature::CanAssistTo(const Unit* u, const Unit* enemy, bool checkfaction /
 {
     // we don't need help from zombies :)
     if (!isAlive())
+        return false;
+
+    // we don't need help from non-combatant ;)
+    if (isCivilian())
         return false;
 
     // skip fighting creature

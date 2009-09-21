@@ -146,7 +146,7 @@ bool Pet::LoadPetFromDB( Player* owner, uint32 petentry, uint32 petnumber, bool 
     }
 
     uint32 pet_number = fields[0].GetUInt32();
-    
+
     if (current && owner->IsPetNeedBeTemporaryUnsummoned())
     {
         owner->SetTemporaryUnsummonedPetNumber(pet_number);
@@ -224,6 +224,7 @@ bool Pet::LoadPetFromDB( Player* owner, uint32 petentry, uint32 petnumber, bool 
     if(owner->IsPvP())
         SetPvP(true);
 
+    SetCanModifyStats(true);
     InitStatsForLevel(petlevel);
     InitTalentForLevel();                                   // set original talents points before spell loading
 
@@ -263,7 +264,6 @@ bool Pet::LoadPetFromDB( Player* owner, uint32 petentry, uint32 petnumber, bool 
     delete result;
 
     //load spells/cooldowns/auras
-    SetCanModifyStats(true);
     _LoadAuras(timediff);
 
     //init AB
@@ -744,9 +744,6 @@ bool Pet::CreateBaseAtCreature(Creature* creature)
     }
     uint32 guid=objmgr.GenerateLowGuid(HIGHGUID_PET);
 
-    sLog.outBasic("SetInstanceID()");
-    SetInstanceId(creature->GetInstanceId());
-
     sLog.outBasic("Create pet");
     uint32 pet_number = objmgr.GeneratePetNumber();
     if(!Create(guid, creature->GetMap(), creature->GetPhaseMask(), creature->GetEntry(), pet_number))
@@ -798,16 +795,19 @@ bool Pet::CreateBaseAtCreature(Creature* creature)
     return true;
 }
 
-bool Pet::InitStatsForLevel(uint32 petlevel)
+bool Pet::InitStatsForLevel(uint32 petlevel, Unit* owner)
 {
     CreatureInfo const *cinfo = GetCreatureInfo();
     assert(cinfo);
 
-    Unit* owner = GetOwner();
     if(!owner)
     {
-        sLog.outError("attempt to summon pet (Entry %u) without owner! Attempt terminated.", cinfo->Entry);
-        return false;
+        owner = GetOwner();
+        if(!owner)
+        {
+            sLog.outError("attempt to summon pet (Entry %u) without owner! Attempt terminated.", cinfo->Entry);
+            return false;
+        }
     }
 
     uint32 creature_ID = (getPetType() == HUNTER_PET) ? 1 : cinfo->Entry;
@@ -1456,13 +1456,16 @@ bool Pet::unlearnSpell(uint32 spell_id, bool learn_prev, bool clear_ab)
 {
     if(removeSpell(spell_id,learn_prev,clear_ab))
     {
-        if(GetOwner()->GetTypeId() == TYPEID_PLAYER)
+        if(!m_loading)
         {
-            if(!m_loading)
+            if (Unit* owner = GetOwner())
             {
-                WorldPacket data(SMSG_PET_REMOVED_SPELL, 4);
-                data << uint32(spell_id);
-                ((Player*)GetOwner())->GetSession()->SendPacket(&data);
+                if(owner->GetTypeId() == TYPEID_PLAYER)
+                {
+                    WorldPacket data(SMSG_PET_REMOVED_SPELL, 4);
+                    data << uint32(spell_id);
+                    ((Player*)owner)->GetSession()->SendPacket(&data);
+                }
             }
         }
         return true;
@@ -1835,8 +1838,7 @@ bool Pet::IsPermanentPetFor(Player* owner)
 
 bool Pet::Create(uint32 guidlow, Map *map, uint32 phaseMask, uint32 Entry, uint32 pet_number)
 {
-    SetMapId(map->GetId());
-    SetInstanceId(map->GetInstanceId());
+    SetMap(map);
     SetPhaseMask(phaseMask,false);
 
     Object::_Create(guidlow, pet_number, HIGHGUID_PET);
@@ -1916,13 +1918,19 @@ void Pet::CastPetAura(PetAura const* aura)
         CastSpell(this, auraId, true);
 }
 
+struct DoPetLearnSpell
+{
+    DoPetLearnSpell(Pet& _pet) : pet(_pet) {}
+    void operator() (uint32 spell_id) { pet.learnSpell(spell_id); }
+    Pet& pet;
+};
+
 void Pet::learnSpellHighRank(uint32 spellid)
 {
     learnSpell(spellid);
 
-    SpellChainMapNext const& nextMap = spellmgr.GetSpellChainNext();
-    for(SpellChainMapNext::const_iterator itr = nextMap.lower_bound(spellid); itr != nextMap.upper_bound(spellid); ++itr)
-        learnSpellHighRank(itr->second);
+    DoPetLearnSpell worker(*this);
+    spellmgr.doForHighRanks(spellid,worker);
 }
 
 void Pet::SynchronizeLevelWithOwner()

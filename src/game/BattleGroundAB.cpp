@@ -143,6 +143,13 @@ void BattleGroundAB::Update(uint32 diff)
                     UpdateWorldState(BG_AB_OP_RESOURCES_ALLY, m_TeamScores[team]);
                 if (team == BG_TEAM_HORDE)
                     UpdateWorldState(BG_AB_OP_RESOURCES_HORDE, m_TeamScores[team]);
+
+                // update achievement flags
+                // we increased m_TeamScores[team] so we just need to check if it is 500 more than other teams resources
+                // horde will be a bit disadvantaged, but we can assume that points aren't updated for both team in same Update() call
+                uint8 otherTeam = (team + 1) % BG_TEAMS_COUNT;
+                if (m_TeamScores[team] > m_TeamScores[otherTeam] + 500)
+                    m_TeamScores500Disadvantage[otherTeam] = true;
             }
         }
 
@@ -413,7 +420,7 @@ void BattleGroundAB::EventPlayerClickedOnFlag(Player *source, GameObject* /*targ
         return;
     }
 
-    uint8 teamIndex = GetTeamIndexByTeamId(source->GetTeam());
+    BattleGroundTeamId teamIndex = GetTeamIndexByTeamId(source->GetTeam());
 
     // Check if player really could use this banner, not cheated
     if (!(m_Nodes[node] == 0 || teamIndex == m_Nodes[node]%2))
@@ -459,7 +466,7 @@ void BattleGroundAB::EventPlayerClickedOnFlag(Player *source, GameObject* /*targ
             m_NodeTimers[node] = BG_AB_FLAG_CAPTURING_TIME;
 
             // FIXME: node names not localized
-            if (teamIndex == 0)
+            if (teamIndex == BG_TEAM_ALLIANCE)
                 SendMessage2ToAll(LANG_BG_AB_NODE_ASSAULTED,CHAT_MSG_BG_SYSTEM_ALLIANCE, source, _GetNodeNameId(node));
             else
                 SendMessage2ToAll(LANG_BG_AB_NODE_ASSAULTED,CHAT_MSG_BG_SYSTEM_HORDE, source, _GetNodeNameId(node));
@@ -476,15 +483,15 @@ void BattleGroundAB::EventPlayerClickedOnFlag(Player *source, GameObject* /*targ
             _CreateBanner(node, BG_AB_NODE_TYPE_OCCUPIED, teamIndex, true);
             _SendNodeUpdate(node);
             m_NodeTimers[node] = 0;
-            _NodeOccupied(node,(teamIndex == 0) ? ALLIANCE:HORDE);
+            _NodeOccupied(node,(teamIndex == BG_TEAM_ALLIANCE) ? ALLIANCE:HORDE);
 
             // FIXME: node names not localized
-            if (teamIndex == 0)
+            if (teamIndex == BG_TEAM_ALLIANCE)
                 SendMessage2ToAll(LANG_BG_AB_NODE_DEFENDED,CHAT_MSG_BG_SYSTEM_ALLIANCE, source, _GetNodeNameId(node));
             else
                 SendMessage2ToAll(LANG_BG_AB_NODE_DEFENDED,CHAT_MSG_BG_SYSTEM_HORDE, source, _GetNodeNameId(node));
         }
-        sound = (teamIndex == 0) ? BG_AB_SOUND_NODE_ASSAULTED_ALLIANCE : BG_AB_SOUND_NODE_ASSAULTED_HORDE;
+        sound = (teamIndex == BG_TEAM_ALLIANCE) ? BG_AB_SOUND_NODE_ASSAULTED_ALLIANCE : BG_AB_SOUND_NODE_ASSAULTED_HORDE;
     }
     // If node is occupied, change to enemy-contested
     else
@@ -501,19 +508,19 @@ void BattleGroundAB::EventPlayerClickedOnFlag(Player *source, GameObject* /*targ
         m_NodeTimers[node] = BG_AB_FLAG_CAPTURING_TIME;
 
         // FIXME: node names not localized
-        if (teamIndex == 0)
+        if (teamIndex == BG_TEAM_ALLIANCE)
             SendMessage2ToAll(LANG_BG_AB_NODE_ASSAULTED,CHAT_MSG_BG_SYSTEM_ALLIANCE, source, _GetNodeNameId(node));
         else
             SendMessage2ToAll(LANG_BG_AB_NODE_ASSAULTED,CHAT_MSG_BG_SYSTEM_HORDE, source, _GetNodeNameId(node));
 
-        sound = (teamIndex == 0) ? BG_AB_SOUND_NODE_ASSAULTED_ALLIANCE : BG_AB_SOUND_NODE_ASSAULTED_HORDE;
+        sound = (teamIndex == BG_TEAM_ALLIANCE) ? BG_AB_SOUND_NODE_ASSAULTED_ALLIANCE : BG_AB_SOUND_NODE_ASSAULTED_HORDE;
     }
 
     // If node is occupied again, send "X has taken the Y" msg.
     if (m_Nodes[node] >= BG_AB_NODE_TYPE_OCCUPIED)
     {
         // FIXME: team and node names not localized
-        if (teamIndex == 0)
+        if (teamIndex == BG_TEAM_ALLIANCE)
             SendMessage2ToAll(LANG_BG_AB_NODE_TAKEN,CHAT_MSG_BG_SYSTEM_ALLIANCE, NULL, LANG_BG_AB_ALLY, _GetNodeNameId(node));
         else
             SendMessage2ToAll(LANG_BG_AB_NODE_TAKEN,CHAT_MSG_BG_SYSTEM_HORDE, NULL, LANG_BG_AB_HORDE, _GetNodeNameId(node));
@@ -576,6 +583,8 @@ void BattleGroundAB::Reset()
     bool isBGWeekend = false;           //TODO FIXME - call sBattleGroundMgr.IsBGWeekend(m_TypeID); - you must also implement that call!
     m_HonorTics = (isBGWeekend) ? BG_AB_ABBGWeekendHonorTicks : BG_AB_NotABBGWeekendHonorTicks;
     m_ReputationTics = (isBGWeekend) ? BG_AB_ABBGWeekendReputationTicks : BG_AB_NotABBGWeekendReputationTicks;
+    m_TeamScores500Disadvantage[BG_TEAM_ALLIANCE] = false;
+    m_TeamScores500Disadvantage[BG_TEAM_HORDE]    = false;
 
     for (uint8 i = 0; i < BG_AB_DYNAMIC_NODES_COUNT; ++i)
     {
@@ -606,7 +615,7 @@ void BattleGroundAB::EndBattleGround(uint32 winner)
 
 WorldSafeLocsEntry const* BattleGroundAB::GetClosestGraveYard(Player* player)
 {
-    uint8 teamIndex = GetTeamIndexByTeamId(player->GetTeam());
+    BattleGroundTeamId teamIndex = GetTeamIndexByTeamId(player->GetTeam());
 
     // Is there any occupied node for this team?
     std::vector<uint8> nodes;
@@ -645,8 +654,7 @@ WorldSafeLocsEntry const* BattleGroundAB::GetClosestGraveYard(Player* player)
 
 void BattleGroundAB::UpdatePlayerScore(Player *Source, uint32 type, uint32 value)
 {
-    std::map<uint64, BattleGroundScore*>::iterator itr = m_PlayerScores.find(Source->GetGUID());
-
+    BattleGroundScoreMap::iterator itr = m_PlayerScores.find(Source->GetGUID());
     if( itr == m_PlayerScores.end() )                         // player not found...
         return;
 
@@ -662,4 +670,15 @@ void BattleGroundAB::UpdatePlayerScore(Player *Source, uint32 type, uint32 value
             BattleGround::UpdatePlayerScore(Source,type,value);
             break;
     }
+}
+
+bool BattleGroundAB::IsAllNodesConrolledByTeam(uint32 team) const
+{
+    uint32 count = 0;
+    for(int i = 0; i < BG_AB_DYNAMIC_NODES_COUNT; ++i)
+        if ((team == ALLIANCE && m_Nodes[i] == BG_AB_NODE_STATUS_ALLY_OCCUPIED) ||
+            (team == HORDE    && m_Nodes[i] == BG_AB_NODE_STATUS_HORDE_OCCUPIED))
+            ++count;
+
+    return count == BG_AB_DYNAMIC_NODES_COUNT;
 }

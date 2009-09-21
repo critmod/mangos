@@ -41,7 +41,7 @@ struct AchievementEntry
     uint32    factionFlag;                                  // 1 -1=all, 0=horde, 1=alliance
     uint32    mapID;                                        // 2 -1=none
     //uint32 parentAchievement;                             // 3 its Achievement parent (can`t start while parent uncomplete, use its Criteria if don`t have own, use its progress on begin)
-    //char *name[16];                                       // 4-19
+    char *name[16];                                         // 4-19
     //uint32 name_flags;                                    // 20
     //char *description[16];                                // 21-36
     //uint32 desc_flags;                                    // 37
@@ -81,11 +81,14 @@ struct AchievementCriteriaEntry
         } kill_creature;
 
         // ACHIEVEMENT_CRITERIA_TYPE_WIN_BG                 = 1
-        // TODO: there are further criterias instead just winning
         struct
         {
             uint32  bgMapID;                                // 3
             uint32  winCount;                               // 4
+            uint32  additionalRequirement1_type;            // 5 additional requirement 1 type
+            uint32  additionalRequirement1_value;           // 6 additional requirement 1 value
+            uint32  additionalRequirement2_type;            // 7 additional requirement 2 type
+            uint32  additionalRequirement2_value;           // 8 additional requirement 1 value
         } win_bg;
 
         // ACHIEVEMENT_CRITERIA_TYPE_REACH_LEVEL            = 5
@@ -661,7 +664,7 @@ struct CinematicCameraEntry
     float       start_x;                                    // 3
     float       start_y;                                    // 4
     float       start_z;                                    // 5
-    float       unk6;                                       // 6 speed?     
+    float       unk6;                                       // 6 speed?
 };
 */
 
@@ -1299,7 +1302,7 @@ struct SpellEntry
     uint32    AttributesEx3;                                // 7        m_attributesExC
     uint32    AttributesEx4;                                // 8        m_attributesExD
     uint32    AttributesEx5;                                // 9        m_attributesExE
-    //uint32    AttributesEx6;                              // 10       m_attributesExF not used
+    uint32    AttributesEx6;                                // 10       m_attributesExF
     uint32    Stances;                                      // 11       m_shapeshiftMask
     uint32    StancesNot;                                   // 12       m_shapeshiftExclude
     uint32    Targets;                                      // 13       m_targets
@@ -1424,13 +1427,6 @@ struct SpellFocusObjectEntry
     uint32    ID;                                           // 0
     //char*     Name[16];                                   // 1-15 unused
                                                             // 16 string flags, unused
-};
-
-// stored in SQL table
-struct SpellThreatEntry
-{
-    uint32      spellId;
-    int32       threat;
 };
 
 struct SpellRadiusEntry
