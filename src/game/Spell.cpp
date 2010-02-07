@@ -5287,6 +5287,10 @@ int32 Spell::CalculatePowerCost()
     if (m_CastItem)
         return 0;
 
+    // triggered spell with power cost only usable for client
+    if (IsTriggeredSpellWithRedundentData())
+        return 0;
+
     // Spell drain all exist power on cast (Only paladin lay of Hands)
     if (m_spellInfo->AttributesEx & SPELL_ATTR_EX_DRAIN_ALL_POWER)
     {
