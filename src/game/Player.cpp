@@ -20837,10 +20837,9 @@ void Player::LearnTalent(uint32 talentId, uint32 talentRank)
     if( (getClassMask() & talentTabInfo->ClassMask) == 0 )
         return;
 
-    // find current max talent rank
-    uint32 curtalent_maxrank = 0;
-    for(int32 k = MAX_TALENT_RANK-1; k > -1; --k)
-
+    // find current max talent rank (0~5)
+    uint8 curtalent_maxrank = 0; // 0 = not learned any rank
+    for(int8 rank = MAX_TALENT_RANK-1; rank >= 0; --rank)
     {
         if(talentInfo->RankID[rank] && HasSpell(talentInfo->RankID[rank]))
         {
