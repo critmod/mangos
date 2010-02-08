@@ -561,10 +561,46 @@ void Spell::EffectSchoolDMG(uint32 effect_idx)
                         {
                             uint32 spellId = poison->GetId();
                             uint32 doses = poison->GetStackAmount();
-                            if (doses > combo)
-                                doses = combo;
-                            for (int i=0; i< doses; i++)
-                                unitTarget->RemoveSingleSpellAurasFromStack(spellId);
+                            if (m_caster->HasAura(58410))// Master Poisoner Rank 3 (100%)
+                                {
+                                    if (doses > combo)
+                                        doses = combo;
+                                }
+                            else if (m_caster->HasAura(31227) ) // Master Poisoner Rank 2 (66%)
+                                switch(urand(1,3))
+                            {
+                                case 1:
+                                    {
+                                    if (doses > combo)
+                                        doses = combo;
+                                    for (int i=0; i< doses; i++)
+                                        unitTarget->RemoveSingleSpellAurasFromStack(spellId);
+                                    }
+                                case 2:
+                                case 3:
+                                    break;
+                            }
+                            else if (m_caster->HasAura(31226) ) // Master Poisoner Rank 1 (33%)
+                                switch(urand(1,3))
+                            {
+                                case 1:
+                                case 2:
+                                    {
+                                    if (doses > combo)
+                                        doses = combo;
+                                    for (int i=0; i< doses; i++)
+                                        unitTarget->RemoveSingleSpellAurasFromStack(spellId);
+                                    }
+                                case 3:
+                                    break;
+                            }
+                            else
+                            {
+                                if (doses > combo)
+                                    doses = combo;
+                                for (int i=0; i< doses; i++)
+                                    unitTarget->RemoveSingleSpellAurasFromStack(spellId);
+                            }
                             damage *= doses;
                             damage += int32(((Player*)m_caster)->GetTotalAttackPowerValue(BASE_ATTACK) * 0.09f * doses);
                         }
