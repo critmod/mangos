@@ -29,6 +29,7 @@
 #include "SharedDefines.h"
 #include "ace/Atomic_Op.h"
 
+
 #include <map>
 #include <set>
 #include <list>
@@ -487,6 +488,10 @@ class World
             else
                 return 0;
         }
+
+		///PVP Announcer
+		void SendPvPAnnounce(Player* killer, Player* killed);
+
 
         /// Are we on a "Player versus Player" server?
         bool IsPvPRealm() { return (getConfig(CONFIG_GAME_TYPE) == REALM_TYPE_PVP || getConfig(CONFIG_GAME_TYPE) == REALM_TYPE_RPPVP || getConfig(CONFIG_GAME_TYPE) == REALM_TYPE_FFA_PVP); }

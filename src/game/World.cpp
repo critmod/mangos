@@ -61,6 +61,7 @@
 #include "WaypointManager.h"
 #include "GMTicketMgr.h"
 #include "Util.h"
+#include "Language.h"
 
 INSTANTIATE_SINGLETON_1( World );
 
@@ -76,6 +77,20 @@ float World::m_MaxVisibleDistanceForObject    = DEFAULT_VISIBILITY_DISTANCE;
 float World::m_MaxVisibleDistanceInFlight     = DEFAULT_VISIBILITY_DISTANCE;
 float World::m_VisibleUnitGreyDistance        = 0;
 float World::m_VisibleObjectGreyDistance      = 0;
+
+///PVP Announcer
+void World::SendPvPAnnounce(Player* killer, Player* killed)
+{
+	std::ostringstream msg;
+	std::ostringstream KillerName;
+	std::ostringstream KilledName;
+
+	KillerName << killer->GetName();
+	KilledName << killed->GetName();
+
+	msg << "|cffff6060[" << KillerName.str().c_str() << "]" << "|cffffff00 Has Killed " << "|cffff6060[" << KilledName.str().c_str() << "]" << "|cffff9900 in " << "[" << killer->GetBaseMap()->GetMapName() << "]";
+	SendWorldText(LANG_SYSTEMMESSAGE, msg.str().c_str());
+}
 
 /// World constructor
 World::World()
