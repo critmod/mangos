@@ -101,7 +101,7 @@ InstanceSave* InstanceSaveManager::AddInstanceSave(uint32 mapId, uint32 instance
         // initialize reset time
         // for normal instances if no creatures are killed the instance will reset in two hours
         if(entry->map_type == MAP_RAID || difficulty > DUNGEON_DIFFICULTY_NORMAL)
-            resetTime = GetResetTimeFor(mapId,difficulty);
+            resetTime = time(NULL) + 7 * HOUR;
         else
         {
             resetTime = time(NULL) + 2 * HOUR;
