@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2010 MaNGOS <http://www.mangosproject.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@
 #include "Opcodes.h"
 #include "InstanceSaveMgr.h"
 
-void WorldSession::HandleCalendarGetCalendar(WorldPacket &recv_data)
+void WorldSession::HandleCalendarGetCalendar(WorldPacket &/*recv_data*/)
 {
     sLog.outDebug("WORLD: CMSG_CALENDAR_GET_CALENDAR");     // empty
 
@@ -44,7 +44,7 @@ void WorldSession::HandleCalendarGetCalendar(WorldPacket &recv_data)
     size_t p_counter = data.wpos();
     data << uint32(counter);                                // instance save count
 
-    for(int i = 0; i < TOTAL_DIFFICULTIES; ++i)
+    for(int i = 0; i < MAX_DIFFICULTY; ++i)
     {
         for (Player::BoundInstancesMap::const_iterator itr = _player->m_boundInstances[i].begin(); itr != _player->m_boundInstances[i].end(); ++itr)
         {

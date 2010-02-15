@@ -1,4 +1,4 @@
-# Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+# Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -34,7 +34,6 @@ libmangosgame_a_SOURCES = \
 	AchievementMgr.cpp \
 	AggressorAI.cpp \
 	AggressorAI.h \
-	AnimalRandomMovementGenerator.h \
 	ArenaTeam.cpp \
 	ArenaTeam.h \
 	ArenaTeamHandler.cpp \
@@ -46,10 +45,12 @@ libmangosgame_a_SOURCES = \
 	BattleGround.cpp \
 	BattleGroundAA.cpp \
 	BattleGroundAB.cpp \
+	BattleGroundABG.cpp \
 	BattleGroundAV.cpp \
 	BattleGroundBE.cpp \
 	BattleGroundDS.cpp \
 	BattleGroundEY.cpp \
+	BattleGroundIC.cpp \
 	BattleGroundNA.cpp \
 	BattleGroundRL.cpp \
 	BattleGroundRV.cpp \
@@ -58,10 +59,12 @@ libmangosgame_a_SOURCES = \
 	BattleGround.h \
 	BattleGroundAA.h \
 	BattleGroundAB.h \
+	BattleGroundABG.h \
 	BattleGroundAV.h \
 	BattleGroundBE.h \
 	BattleGroundDS.h \
 	BattleGroundEY.h \
+	BattleGroundIC.h \
 	BattleGroundNA.h \
 	BattleGroundRL.h \
 	BattleGroundRV.h \
@@ -144,8 +147,8 @@ libmangosgame_a_SOURCES = \
 	GuildHandler.cpp \
 	HomeMovementGenerator.cpp \
 	HomeMovementGenerator.h \
-	HostilRefManager.cpp \
-	HostilRefManager.h \
+	HostileRefManager.cpp \
+	HostileRefManager.h \
 	IdleMovementGenerator.cpp \
 	IdleMovementGenerator.h \
 	InstanceData.cpp \
@@ -214,8 +217,8 @@ libmangosgame_a_SOURCES = \
 	PlayerDump.h \
 	PointMovementGenerator.cpp \
 	PointMovementGenerator.h \
-	PoolHandler.cpp \
-	PoolHandler.h \
+	PoolManager.cpp \
+	PoolManager.h \
 	QueryHandler.cpp \
 	QuestDef.cpp \
 	QuestDef.h \
@@ -279,8 +282,6 @@ libmangosgame_a_SOURCES = \
 	Weather.h \
 	World.cpp \
 	World.h \
-	WorldLog.cpp \
-	WorldLog.h \
 	WorldSession.cpp \
 	WorldSession.h \
 	WorldSocket.cpp \

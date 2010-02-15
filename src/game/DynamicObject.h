@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -61,7 +61,6 @@ class DynamicObject : public WorldObject
         uint32 m_spellId;
         uint32 m_effIndex;
         int32 m_aliveDuration;
-        time_t m_nextThinkTime;
         float m_radius;                                     // radius apply persistent effect, 0 = no persistent effect
         AffectedSet m_affected;
     private:

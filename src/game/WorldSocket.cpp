@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -42,7 +42,7 @@
 #include "WorldSession.h"
 #include "WorldSocketMgr.h"
 #include "Log.h"
-#include "WorldLog.h"
+#include "DBCStores.h"
 
 #if defined( __GNUC__ )
 #pragma pack(1)
@@ -166,25 +166,7 @@ int WorldSocket::SendPacket (const WorldPacket& pct)
         return -1;
 
     // Dump outgoing packet.
-    if (sWorldLog.LogWorld ())
-    {
-        sWorldLog.Log ("SERVER:\nSOCKET: %u\nLENGTH: %u\nOPCODE: %s (0x%.4X)\nDATA:\n",
-                     (uint32) get_handle (),
-                     pct.size (),
-                     LookupOpcodeName (pct.GetOpcode ()),
-                     pct.GetOpcode ());
-
-        uint32 p = 0;
-        while (p < pct.size ())
-        {
-            for (uint32 j = 0; j < 16 && p < pct.size (); j++)
-                sWorldLog.Log ("%.2X ", const_cast<WorldPacket&>(pct)[p++]);
-
-            sWorldLog.Log ("\n");
-        }
-
-        sWorldLog.Log ("\n\n");
-    }
+    sLog.outWorldPacketDump(uint32(get_handle()), pct.GetOpcode(), LookupOpcodeName(pct.GetOpcode()), &pct, false);
 
     ServerPktHeader header(pct.size()+2, pct.GetOpcode());
     m_Crypt.EncryptSend ((uint8*)header.header, header.getHeaderLength());
@@ -263,8 +245,13 @@ int WorldSocket::open (void *a)
     m_Address = remote_addr.get_host_addr ();
 
     // Send startup packet.
-    WorldPacket packet (SMSG_AUTH_CHALLENGE, 4);
+    WorldPacket packet (SMSG_AUTH_CHALLENGE, 24);
+    packet << uint32(1);                                    // 1...31
     packet << m_Seed;
+    packet << uint32(0xF3539DA3);                           // random data
+    packet << uint32(0x6E8547B9);                           // random data
+    packet << uint32(0x9A6AA2F8);                           // random data
+    packet << uint32(0xA4F170F4);                           // random data
 
     if (SendPacket (packet) == -1)
         return -1;
@@ -356,7 +343,7 @@ int WorldSocket::handle_output (ACE_HANDLE)
 
         return -1;
     }
-    else if (n < send_len) //now n > 0
+    else if (n < (ssize_t)send_len) //now n > 0
     {
         m_OutBuffer->rd_ptr (static_cast<size_t> (n));
 
@@ -413,7 +400,7 @@ int WorldSocket::handle_output_queue (GuardType& g)
         mblk->release();
         return -1;
     }
-    else if (n < send_len) //now n > 0
+    else if (n < (ssize_t)send_len) //now n > 0
     {
         mblk->rd_ptr (static_cast<size_t> (n));
 
@@ -489,7 +476,7 @@ int WorldSocket::handle_input_header (void)
 
     if ((header.size < 4) || (header.size > 10240) || (header.cmd  > 10240))
     {
-        sLog.outError ("WorldSocket::handle_input_header: client sent mailformed packet size = %d , cmd = %d",
+        sLog.outError ("WorldSocket::handle_input_header: client sent malformed packet size = %d , cmd = %d",
                        header.size, header.cmd);
 
         errno = EINVAL;
@@ -558,7 +545,7 @@ int WorldSocket::handle_input_missing_data (void)
                                           recv_size);
 
     if (n <= 0)
-        return n;
+        return (int)n;
 
     message_block.wr_ptr (n);
 
@@ -673,29 +660,20 @@ int WorldSocket::ProcessIncoming (WorldPacket* new_pct)
 
     const ACE_UINT16 opcode = new_pct->GetOpcode ();
 
+    if (opcode >= NUM_MSG_TYPES)
+    {
+        sLog.outError( "SESSION: received non-existed opcode 0x%.4X", opcode);
+        return -1;
+    }
+
     if (closing_)
         return -1;
 
     // Dump received packet.
-    if (sWorldLog.LogWorld ())
+    sLog.outWorldPacketDump(uint32(get_handle()), new_pct->GetOpcode(), LookupOpcodeName(new_pct->GetOpcode()), new_pct, true);
+
+    try
     {
-        sWorldLog.Log ("CLIENT:\nSOCKET: %u\nLENGTH: %u\nOPCODE: %s (0x%.4X)\nDATA:\n",
-                     (uint32) get_handle (),
-                     new_pct->size (),
-                     LookupOpcodeName (new_pct->GetOpcode ()),
-                     new_pct->GetOpcode ());
-
-        uint32 p = 0;
-        while (p < new_pct->size ())
-        {
-            for (uint32 j = 0; j < 16 && p < new_pct->size (); j++)
-                sWorldLog.Log ("%.2X ", (*new_pct)[p++]);
-            sWorldLog.Log ("\n");
-        }
-        sWorldLog.Log ("\n\n");
-    }
-
-    try {
         switch(opcode)
         {
             case CMSG_PING:
@@ -733,13 +711,13 @@ int WorldSocket::ProcessIncoming (WorldPacket* new_pct)
             }
         }
     }
-    catch(ByteBufferException &)
+    catch (ByteBufferException &)
     {
         sLog.outError("WorldSocket::ProcessIncoming ByteBufferException occured while parsing an instant handled packet (opcode: %u) from client %s, accountid=%i. Disconnected client.",
                 opcode, GetRemoteAddress().c_str(), m_Session?m_Session->GetAccountId():-1);
         if(sLog.IsOutDebug())
         {
-            sLog.outDebug("Dumping error causing packet:");
+            sLog.outDebug("Dumping error-causing packet:");
             new_pct->hexlike();
         }
 
@@ -755,7 +733,8 @@ int WorldSocket::HandleAuthSession (WorldPacket& recvPacket)
     uint8 digest[20];
     uint32 clientSeed;
     uint32 unk2, unk3;
-    uint32 BuiltNumberClient;
+    uint64 unk4;
+    uint32 ClientBuild;
     uint32 id, security;
     uint8 expansion = 0;
     LocaleConstant locale;
@@ -767,19 +746,32 @@ int WorldSocket::HandleAuthSession (WorldPacket& recvPacket)
     BigNumber K;
 
     // Read the content of the packet
-    recvPacket >> BuiltNumberClient;                        // for now no use
+    recvPacket >> ClientBuild;
     recvPacket >> unk2;
     recvPacket >> account;
     recvPacket >> unk3;
     recvPacket >> clientSeed;
+    recvPacket >> unk4;
     recvPacket.read (digest, 20);
 
     DEBUG_LOG ("WorldSocket::HandleAuthSession: client %u, unk2 %u, account %s, unk3 %u, clientseed %u",
-                BuiltNumberClient,
+                ClientBuild,
                 unk2,
                 account.c_str (),
                 unk3,
                 clientSeed);
+
+    // Check the version of client trying to connect
+    if(!IsAcceptableClientBuild(ClientBuild))
+    {
+        packet.Initialize (SMSG_AUTH_RESPONSE, 1);
+        packet << uint8 (AUTH_VERSION_MISMATCH);
+
+        SendPacket (packet);
+
+        sLog.outError ("WorldSocket::HandleAuthSession: Sent Auth Response (version mismatch).");
+        return -1;
+    }
 
     // Get the account information from the realmd database
     std::string safe_account = account; // Duplicate, else will screw the SHA hash verification below
@@ -816,7 +808,7 @@ int WorldSocket::HandleAuthSession (WorldPacket& recvPacket)
 
     Field* fields = result->Fetch ();
 
-    expansion = ((sWorld.getConfig(CONFIG_EXPANSION) > fields[7].GetUInt8()) ? fields[7].GetUInt8() : sWorld.getConfig(CONFIG_EXPANSION));
+    expansion = ((sWorld.getConfig(CONFIG_UINT32_EXPANSION) > fields[7].GetUInt8()) ? fields[7].GetUInt8() : sWorld.getConfig(CONFIG_UINT32_EXPANSION));
 
     N.SetHexStr ("894B645E89E1535BBDAD5B8B290650530801B18EBFBF5E8FAB3C82872A3E9BB7");
     g.SetDword (7);
@@ -866,9 +858,9 @@ int WorldSocket::HandleAuthSession (WorldPacket& recvPacket)
 
     // Re-check account ban (same check as in realmd)
     QueryResult *banresult =
-          loginDatabase.PQuery ("SELECT 1 FROM account_banned WHERE id = %u AND active = 1 "
+          loginDatabase.PQuery ("SELECT 1 FROM account_banned WHERE id = %u AND active = 1 AND (unbandate > UNIX_TIMESTAMP() OR unbandate = bandate)"
                                 "UNION "
-                                "SELECT 1 FROM ip_banned WHERE ip = '%s'",
+                                "SELECT 1 FROM ip_banned WHERE (unbandate = bandate OR unbandate > UNIX_TIMESTAMP()) AND ip = '%s'",
                                 id, GetRemoteAddress().c_str());
 
     if (banresult) // if account banned
@@ -976,7 +968,7 @@ int WorldSocket::HandlePing (WorldPacket& recvPacket)
         {
             ++m_OverSpeedPings;
 
-            uint32 max_count = sWorld.getConfig (CONFIG_MAX_OVERSPEED_PINGS);
+            uint32 max_count = sWorld.getConfig (CONFIG_UINT32_MAX_OVERSPEED_PINGS);
 
             if (max_count && m_OverSpeedPings > max_count)
             {
