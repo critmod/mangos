@@ -3327,9 +3327,6 @@ DiminishingGroup GetDiminishingReturnsGroupForSpell(SpellEntry const* spellproto
             // some generic arena related spells have by some strange reason MECHANIC_TURN
             if  (spellproto->Mechanic == MECHANIC_TURN)
                 return DIMINISHING_NONE;
-            // Entrapment triggered
-            else if (spellproto->SpellIconID == 20)
-                return DIMINISHING_ENTRAPMENT;
             break;
         case SPELLFAMILY_ROGUE:
         {
@@ -3344,19 +3341,6 @@ DiminishingGroup GetDiminishingReturnsGroupForSpell(SpellEntry const* spellproto
                 return DIMINISHING_LIMITONLY;
             break;
         }
-        case SPELLFAMILY_PALADIN:
-        {
-            // Repentance
-            if (spellproto->SpellFamilyFlags & UI64LIT(0x00000000004))
-                return DIMINISHING_DISORIENT;
-            break;
-        }
-        case SPELLFAMILY_HUNTER:
-        {
-            // Scatter Shot
-            if (spellproto->SpellFamilyFlags & UI64LIT(0x00000040000) && spellproto->SpellFamilyFlags2 & UI64LIT(0x00000008000))
-                return DIMINISHING_SCATTER_SHOT;
-        }
         case SPELLFAMILY_WARLOCK:
         {
             // Curses/etc
@@ -3364,7 +3348,7 @@ DiminishingGroup GetDiminishingReturnsGroupForSpell(SpellEntry const* spellproto
                 return DIMINISHING_LIMITONLY;
             // Seduction
             else if (spellproto->SpellFamilyFlags & UI64LIT(0x00040000000))
-                return DIMINISHING_FEAR_BLIND;
+                return DIMINISHING_CHARM;
             break;
         }
         case SPELLFAMILY_DRUID:
@@ -3378,9 +3362,6 @@ DiminishingGroup GetDiminishingReturnsGroupForSpell(SpellEntry const* spellproto
             // Faerie Fire
             else if (spellproto->SpellFamilyFlags & UI64LIT(0x00000000400))
                 return DIMINISHING_LIMITONLY;
-            // Hibernate
-            else if (spellproto->SpellFamilyFlags & UI64LIT(0x0002000001000000) && spellproto->SpellFamilyFlags2 & UI64LIT(0x00000008000))
-                return DIMINISHING_HIBERNATE;
             break;
         }
         case SPELLFAMILY_WARRIOR:
@@ -3388,9 +3369,6 @@ DiminishingGroup GetDiminishingReturnsGroupForSpell(SpellEntry const* spellproto
             // Hamstring - limit duration to 10s in PvP
             if (spellproto->SpellFamilyFlags & UI64LIT(0x00000000002))
                 return DIMINISHING_LIMITONLY;
-            // Charge Stun
-            else if (spellproto->Id == 7922)
-                return DIMINISHING_NONE;
             break;
         }
         case SPELLFAMILY_PRIEST:
@@ -3398,16 +3376,13 @@ DiminishingGroup GetDiminishingReturnsGroupForSpell(SpellEntry const* spellproto
             // Vampiric Embrace
             if ((spellproto->SpellFamilyFlags & UI64LIT(0x00000000004)) && spellproto->SpellIconID == 150)
                 return DIMINISHING_LIMITONLY;
-            // Mind Control
-            if ((spellproto->SpellFamilyFlags & UI64LIT(0x00000020000)) && spellproto->SpellIconID == 150)
-                return DIMINISHING_MIND_CONTROL;
             break;
         }
         case SPELLFAMILY_DEATHKNIGHT:
         {
             // Hungering Cold (no flags)
             if (spellproto->SpellIconID == 2797)
-                return DIMINISHING_DISORIENT;
+                return DIMINISHING_POLYMORPH_GOUGE_SAP;
             break;
         }
         default:
@@ -3422,27 +3397,27 @@ DiminishingGroup GetDiminishingReturnsGroupForSpell(SpellEntry const* spellproto
     if (mechanic & ((1<<(MECHANIC_STUN-1))|(1<<(MECHANIC_SHACKLE-1))))
         return triggered ? DIMINISHING_TRIGGER_STUN : DIMINISHING_CONTROL_STUN;
     if (mechanic & (1<<(MECHANIC_SLEEP-1)))
-        return DIMINISHING_DISORIENT;
+        return DIMINISHING_FREEZE_SLEEP;
     if (mechanic & (1<<(MECHANIC_POLYMORPH-1)))
-        return DIMINISHING_DISORIENT;
+        return DIMINISHING_POLYMORPH_GOUGE_SAP;
     if (mechanic & (1<<(MECHANIC_ROOT-1)))
         return triggered ? DIMINISHING_TRIGGER_ROOT : DIMINISHING_CONTROL_ROOT;
     if (mechanic & ((1<<(MECHANIC_FEAR-1))|(1<<(MECHANIC_TURN-1))))
         return DIMINISHING_FEAR_BLIND;
     if (mechanic & (1<<(MECHANIC_CHARM-1)))
-        return DIMINISHING_FEAR_BLIND;
+        return DIMINISHING_CHARM;
     if (mechanic & (1<<(MECHANIC_SILENCE-1)))
         return DIMINISHING_SILENCE;
     if (mechanic & (1<<(MECHANIC_DISARM-1)))
         return DIMINISHING_DISARM;
     if (mechanic & (1<<(MECHANIC_FREEZE-1)))
-        return DIMINISHING_DISORIENT;
+        return DIMINISHING_FREEZE_SLEEP;
     if (mechanic & ((1<<(MECHANIC_KNOCKOUT-1))|(1<<(MECHANIC_SAPPED-1))))
-        return DIMINISHING_DISORIENT;
+        return DIMINISHING_POLYMORPH_GOUGE_SAP;
     if (mechanic & (1<<(MECHANIC_BANISH-1)))
         return DIMINISHING_BANISH;
     if (mechanic & (1<<(MECHANIC_HORROR-1)))
-        return DIMINISHING_HORROR;
+        return DIMINISHING_DEATHCOIL;
 
     return DIMINISHING_NONE;
 }
@@ -3455,13 +3430,6 @@ int32 GetDiminishingReturnsLimitDuration(DiminishingGroup group, SpellEntry cons
     // Explicit diminishing duration
     switch(spellproto->SpellFamilyName)
     {
-        case SPELLFAMILY_WARLOCK:
-        {
-            // Banish
-            if (spellproto->SpellFamilyFlags & UI64LIT(0x0800000000000000))
-                return 6000;
-            break;
-        }
         case SPELLFAMILY_HUNTER:
         {
             // Wyvern Sting
@@ -3506,13 +3474,13 @@ bool IsDiminishingReturnsGroupDurationLimited(DiminishingGroup group)
         case DIMINISHING_CONTROL_ROOT:
         case DIMINISHING_TRIGGER_ROOT:
         case DIMINISHING_FEAR_BLIND:
-        case DIMINISHING_DISORIENT:
+        case DIMINISHING_CHARM:
+        case DIMINISHING_POLYMORPH_GOUGE_SAP:
         case DIMINISHING_CHEAPSHOT_POUNCE:
+        case DIMINISHING_FREEZE_SLEEP:
         case DIMINISHING_CYCLONE:
         case DIMINISHING_BANISH:
         case DIMINISHING_LIMITONLY:
-        case DIMINISHING_MIND_CONTROL:
-        case DIMINISHING_HIBERNATE:
             return true;
         default:
             return false;
@@ -3532,15 +3500,13 @@ DiminishingReturnsType GetDiminishingReturnsGroupType(DiminishingGroup group)
         case DIMINISHING_CONTROL_ROOT:
         case DIMINISHING_TRIGGER_ROOT:
         case DIMINISHING_FEAR_BLIND:
-        case DIMINISHING_DISORIENT:
+        case DIMINISHING_CHARM:
+        case DIMINISHING_POLYMORPH_GOUGE_SAP:
         case DIMINISHING_SILENCE:
         case DIMINISHING_DISARM:
-        case DIMINISHING_HORROR:
+        case DIMINISHING_DEATHCOIL:
+        case DIMINISHING_FREEZE_SLEEP:
         case DIMINISHING_BANISH:
-        case DIMINISHING_HIBERNATE:
-        case DIMINISHING_ENTRAPMENT:
-        case DIMINISHING_SCATTER_SHOT:
-        case DIMINISHING_MIND_CONTROL:
             return DRTYPE_PLAYER;
         default:
             break;

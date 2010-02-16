@@ -2429,20 +2429,18 @@ enum DiminishingGroup
     DIMINISHING_CONTROL_ROOT,                               // Immobilizing effects from casted spells
     DIMINISHING_TRIGGER_ROOT,                               // Immobilizing effects from triggered spells like Frostbite
     DIMINISHING_FEAR_BLIND,                                 // Fears & blind
-    DIMINISHING_DISORIENT,                                  // Various disorients like Sap, Polymorph, Repentance od Wyvern Sting
-    // Warlock and Priest Specific
-    DIMINISHING_HORROR,                                     // Death Coil and Psychic Horror
+    DIMINISHING_CHARM,
+    DIMINISHING_POLYMORPH_GOUGE_SAP,
+    // Warlock Specific
+    DIMINISHING_DEATHCOIL,                                  // Death Coil Diminish only with another Death Coil
     // Druid Specific
     DIMINISHING_CYCLONE,                                    // From 2.3.0
     // Shared Class Specific
     DIMINISHING_CHEAPSHOT_POUNCE,
     DIMINISHING_DISARM,                                     // From 2.3.0
     DIMINISHING_SILENCE,                                    // From 2.3.0
+    DIMINISHING_FREEZE_SLEEP,                               // Hunter's Freezing Trap
     DIMINISHING_BANISH,
-    DIMINISHING_HIBERNATE,
-    DIMINISHING_ENTRAPMENT,
-    DIMINISHING_SCATTER_SHOT,
-    DIMINISHING_MIND_CONTROL,
     // Other
     // Don't Diminish, but limit duration to 10s
     DIMINISHING_LIMITONLY
