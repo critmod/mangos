@@ -2109,7 +2109,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     if(unitTarget->GetTypeId() != TYPEID_PLAYER)
                     {
                         unitTarget->GetMap()->CreatureRelocation((Creature*)unitTarget,x,y,z,orientation);
-                        ((Creature*)unitTarget)->SendMonsterMove(x, y, z, orientation, SPLINEFLAG_WALKMODE, 1);
+                        ((Creature*)unitTarget)->SendMonsterMove(x, y, z, SPLINETYPE_NORMAL, SPLINEFLAG_WALKMODE, 0);
                     }
                     else
                         unitTarget->NearTeleportTo(x,y,z,orientation,false);

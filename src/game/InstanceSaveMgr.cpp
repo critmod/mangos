@@ -645,12 +645,12 @@ void InstanceSaveManager::_ResetOrWarnAll(uint32 mapid, Difficulty difficulty, b
         uint32 period = mapDiff->resetTime * DAY;
         if (period < DAY)
 			period = DAY;
-        //time_t next_reset = ((now + timeLeft + MINUTE) / DAY * DAY) + period + diff;
-		uint64 next_reset = ((now + timeLeft + MINUTE) / DAY * DAY) + period + diff;
-		SetResetTimeFor(mapid, difficulty, next_reset);
-		ScheduleReset(true, uint64(next_reset-3600), InstResetEvent(1, mapid, difficulty, -1));
+        time_t next_reset = ((now + timeLeft + MINUTE) / DAY * DAY) + period + diff;
+		//uint64 next_reset = ((now + timeLeft + MINUTE) / DAY * DAY) + period + diff;
+		//SetResetTimeFor(mapid, difficulty, next_reset);
+		//ScheduleReset(true, (time_t)(next_reset-3600), InstResetEvent(1, mapid, difficulty, -1));
         // update it in the DB
-        CharacterDatabase.PExecute("UPDATE instance_reset SET resettime = '"UI64FMTD"' WHERE mapid = '%d' AND difficulty = '%d'", next_reset, mapid, difficulty);
+        CharacterDatabase.PExecute("UPDATE instance_reset SET resettime = '"UI64FMTD"' WHERE mapid = '%d' AND difficulty = '%d'", (uint64)next_reset, mapid, difficulty);
     }
 
 //FOR REVISION
