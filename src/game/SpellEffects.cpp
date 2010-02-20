@@ -1257,6 +1257,16 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     }
                     return;
                 }
+                case 46606:                                 // Plague Canister Dummy
+                {
+                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT)
+                        return;
+
+                    unitTarget->CastSpell(m_caster, 43160, true);
+                    unitTarget->setDeathState(JUST_DIED);
+                    unitTarget->SetHealth(0);
+                    return;
+                }
                 case 46797:                                 // Quest - Borean Tundra - Set Explosives Cart
                     if (!unitTarget)
                         return;
@@ -1681,7 +1691,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     if (!pEnchant)
                         return;
 
-                    for (int s=0;s<3;s++)
+                    for (int s = 0; s < 3; ++s)
                     {
                         if (pEnchant->type[s]!=ITEM_ENCHANTMENT_TYPE_COMBAT_SPELL)
                             continue;
@@ -1908,7 +1918,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     {
                         Unit::AttackerSet::iterator aItr = attackers.begin();
                         std::advance(aItr, rand() % attackers.size());
-                        AddUnitTarget((*aItr), 1);
+                        AddUnitTarget((*aItr), EFFECT_INDEX_1);
                         attackers.erase(aItr);
                     }
 
@@ -2128,7 +2138,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
     }
 
     // Script based implementation. Must be used only for not good for implementation in core spell effects
-    // So called only for not proccessed cases
+    // So called only for not processed cases
     if (gameObjTarget)
         Script->EffectDummyGameObj(m_caster, m_spellInfo->Id, eff_idx, gameObjTarget);
     else if (unitTarget && unitTarget->GetTypeId()==TYPEID_UNIT)
@@ -4855,14 +4865,14 @@ void Spell::EffectWeaponDmg(SpellEffectIndex eff_idx)
         {
             case SPELL_EFFECT_WEAPON_DAMAGE:
             case SPELL_EFFECT_WEAPON_DAMAGE_NOSCHOOL:
-                fixed_bonus += CalculateDamage(j, unitTarget);
+                fixed_bonus += CalculateDamage(SpellEffectIndex(j), unitTarget);
                 break;
             case SPELL_EFFECT_NORMALIZED_WEAPON_DMG:
-                fixed_bonus += CalculateDamage(j, unitTarget);
+                fixed_bonus += CalculateDamage(SpellEffectIndex(j), unitTarget);
                 normalized = true;
                 break;
             case SPELL_EFFECT_WEAPON_PERCENT_DAMAGE:
-                weaponDamagePercentMod *= float(CalculateDamage(j, unitTarget)) / 100.0f;
+                weaponDamagePercentMod *= float(CalculateDamage(SpellEffectIndex(j), unitTarget)) / 100.0f;
 
                 // applied only to prev.effects fixed damage
                 fixed_bonus = int32(fixed_bonus*weaponDamagePercentMod);
