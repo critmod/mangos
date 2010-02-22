@@ -2591,6 +2591,8 @@ void Spell::cast(bool skipCheck)
                 AddPrecastSpell(23230);                     // Blood Fury - Healing Reduction
             else if(m_spellInfo->Id == 20594)               // Stoneskin
                 AddTriggeredSpell(65116);                   // Stoneskin - armor 10% for 8 sec
+            else if(m_spellInfo->Id == 71904)                // Chaos Bane buff
+                AddTriggeredSpell(73422);
             break;
         }
         case SPELLFAMILY_MAGE:
