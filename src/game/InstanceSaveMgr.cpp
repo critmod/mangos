@@ -103,12 +103,12 @@ InstanceSave* InstanceSaveManager::AddInstanceSave(uint32 mapId, uint32 instance
         if(entry->map_type == MAP_RAID || difficulty > DUNGEON_DIFFICULTY_NORMAL)
         {
 			resetTime = GetResetTimeFor(mapId,difficulty);
-			//ScheduleReset(true, resetTime, InstResetEvent(0, mapId, difficulty, instanceId));
+			ScheduleReset(true, resetTime, InstResetEvent(0, mapId, difficulty, instanceId));
         }
 		if(entry->map_type == MAP_RAID || difficulty > DUNGEON_DIFFICULTY_HEROIC)
         {
             resetTime = GetResetTimeFor(mapId,difficulty);
-            //ScheduleReset(true, resetTime, InstResetEvent(0, mapId, difficulty, instanceId));
+            ScheduleReset(true, resetTime, InstResetEvent(0, mapId, difficulty, instanceId));
         }
     }
 
