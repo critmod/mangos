@@ -646,11 +646,11 @@ void InstanceSaveManager::_ResetOrWarnAll(uint32 mapid, Difficulty difficulty, b
         uint32 period = (mapDiff->resetTime / DAY * sWorld.getConfig(CONFIG_UINT32_INSTANCE_RESET_TIME_HOUR)) * DAY;
         if (period < DAY)
 			period = DAY;
-		time_t next_reset = today + period + diff;
+		time_t next_reset = ((now + timeLeft + MINUTE) / DAY * DAY) + period + diff;
         //time_t next_reset = ((now + timeLeft + MINUTE) / DAY * DAY) + period + diff;
 		//uint64 next_reset = ((now + timeLeft + MINUTE) / DAY * DAY) + period + diff;
-		//SetResetTimeFor(mapid, difficulty, next_reset);
-		//ScheduleReset(true, (time_t)(next_reset-3600), InstResetEvent(1, mapid, difficulty, -1));
+        SetResetTimeFor(mapid, difficulty, next_reset);
+        ScheduleReset(true, time_t(next_reset-3600), InstResetEvent(1, mapid, difficulty, -1));
         // update it in the DB
         CharacterDatabase.PExecute("UPDATE instance_reset SET resettime = '"UI64FMTD"' WHERE mapid = '%d' AND difficulty = '%d'", (uint64)next_reset, mapid, difficulty);
         SetResetTimeFor(mapid,difficulty,(uint64)next_reset);
