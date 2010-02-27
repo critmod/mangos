@@ -4694,7 +4694,18 @@ void Aura::HandlePeriodicEnergize(bool apply, bool Real)
                 break;
         }
     }
-
+    if (!apply && !loading)
+    {
+        switch (GetId())
+        {
+            case 5229:                                      // Druid Bear Enrage
+                if (m_target->HasAura(51185))               // King of the Jungle self Enrage bonus with infinite duration
+                    m_target->RemoveAurasDueToSpell(51185);
+                break;
+            default:
+                break;
+        }
+    }
     m_isPeriodic = apply;
 }
 
