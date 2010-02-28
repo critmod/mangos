@@ -102,13 +102,11 @@ InstanceSave* InstanceSaveManager::AddInstanceSave(uint32 mapId, uint32 instance
         // for normal instances if no creatures are killed the instance will reset in two hours
         if(entry->map_type == MAP_RAID || difficulty > DUNGEON_DIFFICULTY_NORMAL)
         {
-			resetTime = GetResetTimeFor(mapId,difficulty);
-			ScheduleReset(true, resetTime, InstResetEvent(0, mapId, difficulty, instanceId));
+			resetTime = GetResetTimeFor(mapId,difficulty);		
         }
 		if(entry->map_type == MAP_RAID || difficulty > DUNGEON_DIFFICULTY_HEROIC)
         {
-            resetTime = GetResetTimeFor(mapId,difficulty);
-            ScheduleReset(true, resetTime, InstResetEvent(0, mapId, difficulty, instanceId));
+            resetTime = GetResetTimeFor(mapId,difficulty);         
         }
     }
 
@@ -649,12 +647,10 @@ void InstanceSaveManager::_ResetOrWarnAll(uint32 mapid, Difficulty difficulty, b
 		time_t next_reset = ((now + timeLeft + MINUTE) / DAY * DAY) + period + diff;
         //time_t next_reset = ((now + timeLeft + MINUTE) / DAY * DAY) + period + diff;
 		//uint64 next_reset = ((now + timeLeft + MINUTE) / DAY * DAY) + period + diff;
-        SetResetTimeFor(mapid, difficulty, next_reset);
+        SetResetTimeFor(mapid,difficulty,(uint64)next_reset);
         ScheduleReset(true, time_t(next_reset-3600), InstResetEvent(1, mapid, difficulty, -1));
         // update it in the DB
         CharacterDatabase.PExecute("UPDATE instance_reset SET resettime = '"UI64FMTD"' WHERE mapid = '%d' AND difficulty = '%d'", (uint64)next_reset, mapid, difficulty);
-        SetResetTimeFor(mapid,difficulty,(uint64)next_reset);
-        ScheduleReset(true, next_reset-3600, InstResetEvent(1, mapid, difficulty, -1));
     }
 
 //FOR REVISION
