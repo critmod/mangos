@@ -945,23 +945,24 @@ bool Aura::IsNeedVisibleSlot(Unit const* caster) const
 {
     bool totemAura = caster && caster->GetTypeId() == TYPEID_UNIT && ((Creature*)caster)->isTotem();
 
-    // passive auras (except totem auras) do not get placed in the slots
-    // generic not caster case
-    if (m_isPassive && !totemAura && m_target == caster)
-        return false;
-
-    // special area auras case at caster
+    // special area auras cases
     switch(m_spellProto->Effect[GetEffIndex()])
     {
         case SPELL_EFFECT_APPLY_AREA_AURA_ENEMY:
-            return false;
+            return m_target != caster;
+        case SPELL_EFFECT_APPLY_AREA_AURA_PET:
+        case SPELL_EFFECT_APPLY_AREA_AURA_OWNER:
+        case SPELL_EFFECT_APPLY_AREA_AURA_FRIEND:
+        case SPELL_EFFECT_APPLY_AREA_AURA_PARTY:
         case SPELL_EFFECT_APPLY_AREA_AURA_RAID:
-            // not sure is totemAura  need, just preserve old code results
-            return totemAura || m_modifier.m_auraname != SPELL_AURA_NONE;
-        default: break;
+            // passive auras (except totem auras) do not get placed in caster slot
+            return (m_target != caster || totemAura || !m_isPassive) && m_modifier.m_auraname != SPELL_AURA_NONE;
+        default:
+            break;
     }
 
-    return true;
+    // passive auras (except totem auras) do not get placed in the slots
+    return !m_isPassive || totemAura;
 }
 
 void Aura::_AddAura()
@@ -2158,17 +2159,7 @@ void Aura::TriggerSpell()
                     // Totemic Mastery (Skyshatter Regalia (Shaman Tier 6) - bonus)
                     case 38443:
                     {
-                        bool all = true;
-                        for(int i = 0; i < MAX_TOTEM; ++i)
-                        {
-                            if(!target->m_TotemSlot[i])
-                            {
-                                all = false;
-                                break;
-                            }
-                        }
-
-                        if(all)
+                        if(target->IsAllTotemSlotsUsed())
                             target->CastSpell(target, 38437, true, NULL, this);
                         else
                             target->RemoveAurasDueToSpell(38437);
@@ -2315,16 +2306,6 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                         // root to self part of (root_target->charge->root_self sequence
                         if (Unit* caster = GetCaster())
                             caster->CastSpell(caster, 13138, true, NULL, this);
-                        return;
-                    case 35357:                             // Spawn Feign Death
-                        if (m_target->GetTypeId() == TYPEID_UNIT)
-                        {
-                            // flags not set like it's done in SetFeignDeath(), also this aura expected to be existing always/from spawn
-                            m_target->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_UNK_29);
-                            m_target->SetFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_FEIGN_DEATH);
-
-                            m_target->addUnitState(UNIT_STAT_DIED);
-                        }
                         return;
                     case 39850:                             // Rocket Blast
                         if(roll_chance_i(20))               // backfire stun
@@ -2595,6 +2576,59 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                         return;
                     }
                     m_target->RemoveAurasDueToSpell(spellId);
+                    return;
+                }
+                case 29266:                             // Permanent Feign Death
+                case 31261:                             // Permanent Feign Death (Root)
+                case 37493:                             // Feign Death
+                case 51329:                             // Feign Death
+                case 52593:                             // Bloated Abomination Feign Death
+                case 55795:                             // Falling Dragon Feign Death
+                case 57626:                             // Feign Death
+                case 57685:                             // Permanent Feign Death
+                case 58768:                             // Permanent Feign Death (Freeze Jumpend)
+                case 58806:                             // Permanent Feign Death (Drowned Anim)
+                case 58951:                             // Permanent Feign Death
+                case 64461:                             // Permanent Feign Death (No Anim) (Root)
+                case 65985:                             // Permanent Feign Death (Root Silence Pacify)
+                case 70592:                             // Permanent Feign Death
+                case 70628:                             // Permanent Feign Death
+                case 70630:                             // Frozen Aftermath - Feign Death
+                case 71598:                             // Feign Death
+                {
+                    // Unclear what the difference really is between them.
+                    // Some has effect1 that makes the difference, however not all.
+                    // Some appear to be used depending on creature location, in water, at solid ground, in air/suspended, etc
+                    // For now, just handle all the same way
+                    if (m_target->GetTypeId() == TYPEID_UNIT)
+                        m_target->SetFeignDeath(apply);
+
+                    return;
+                }
+                case 35356:                             // Spawn Feign Death
+                case 35357:                             // Spawn Feign Death
+                case 42557:                             // Feign Death
+                {
+                    if (m_target->GetTypeId() == TYPEID_UNIT)
+                    {
+                        // Flags not set like it's done in SetFeignDeath() and apparently always applied at spawn of creature
+                        // All three does however have SPELL_EFFECT_SPAWN(46) as effect1
+                        // It is possible this effect will remove some flags, and then the three here can be handled "normally"
+                        if (apply)
+                        {
+                            m_target->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_UNK_29);
+                            m_target->SetFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_FEIGN_DEATH);
+
+                            m_target->addUnitState(UNIT_STAT_DIED);
+                        }
+                        else
+                        {
+                            m_target->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_UNK_29);
+                            m_target->RemoveFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_FEIGN_DEATH);
+
+                            m_target->clearUnitState(UNIT_STAT_DIED);
+                        }
+                    }
                     return;
                 }
                 //Summon Fire Elemental
@@ -6389,9 +6423,148 @@ void Aura::HandleSpellSpecificBoosts(bool apply)
             switch (GetId())
             {
                 case 49039: spellId1 = 50397; break;        // Lichborne
-                case 48263: spellId1 = 61261; break;        // Frost Presence
-                case 48265: spellId1 = 49772; break;        // Unholy Presence move speed
-                default: return;
+
+                case 48263:                                 // Frost Presence
+                case 48265:                                 // Unholy Presence
+                case 48266:                                 // Blood Presence
+                {
+                    // else part one per 3 pair
+                    if (GetId()==48263 || GetId()==48265)   // Frost Presence or Unholy Presence
+                    {
+                        // Improved Blood Presence
+                        int32 heal_pct = 0;
+                        if (apply)
+                        {
+                            Unit::AuraList const& bloodAuras = m_target->GetAurasByType(SPELL_AURA_DUMMY);
+                            for(Unit::AuraList::const_iterator itr = bloodAuras.begin(); itr != bloodAuras.end(); ++itr)
+                            {
+                                // skip same icon
+                                if ((*itr)->GetSpellProto()->SpellFamilyName == SPELLFAMILY_DEATHKNIGHT &&
+                                    (*itr)->GetSpellProto()->SpellIconID == 2636)
+                                {
+                                    heal_pct = (*itr)->GetModifier()->m_amount;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (heal_pct)
+                            m_target->CastCustomSpell(m_target, 63611, &heal_pct, NULL, NULL, true, NULL, this);
+                        else
+                            m_target->RemoveAurasDueToSpell(63611);
+                    }
+                    else
+                        spellId1 = 63611;                   // Improved Blood Presence, trigger for heal
+
+                    if (GetId()==48263 || GetId()==48266)   // Frost Presence or Blood Presence
+                    {
+                        // Improved Unholy Presence
+                        int32 power_pct = 0;
+                        if (apply)
+                        {
+                            Unit::AuraList const& unholyAuras = m_target->GetAurasByType(SPELL_AURA_DUMMY);
+                            for(Unit::AuraList::const_iterator itr = unholyAuras.begin(); itr != unholyAuras.end(); ++itr)
+                            {
+                                // skip same icon
+                                if ((*itr)->GetSpellProto()->SpellFamilyName == SPELLFAMILY_DEATHKNIGHT &&
+                                    (*itr)->GetSpellProto()->SpellIconID == 2633)
+                                {
+                                    power_pct = (*itr)->GetModifier()->m_amount;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (power_pct)
+                            m_target->CastCustomSpell(m_target, 65095, &power_pct, NULL, NULL, true, NULL, this);
+                        else
+                            m_target->RemoveAurasDueToSpell(65095);
+
+                        if (power_pct || !apply)
+                            spellId2 = 49772;                   // Unholy Presence, speed part
+                    }
+                    else
+                        spellId1 = 49772;                       // Unholy Presence move speed
+
+                    if (GetId()==48265 || GetId()==48266)       // Unholy Presence or Blood Presence
+                    {
+                        // Improved Frost Presence
+                        int32 stamina_pct = 0;
+                        if (apply)
+                        {
+                            Unit::AuraList const& frostAuras = m_target->GetAurasByType(SPELL_AURA_DUMMY);
+                            for(Unit::AuraList::const_iterator itr = frostAuras.begin(); itr != frostAuras.end(); ++itr)
+                            {
+                                // skip same icon
+                                if ((*itr)->GetSpellProto()->SpellFamilyName == SPELLFAMILY_DEATHKNIGHT &&
+                                    (*itr)->GetSpellProto()->SpellIconID == 2632)
+                                {
+                                    stamina_pct = (*itr)->GetModifier()->m_amount;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (stamina_pct)
+                            m_target->CastCustomSpell(m_target, 61261, &stamina_pct, NULL, NULL, true, NULL, this);
+                        else
+                            m_target->RemoveAurasDueToSpell(61261);
+                    }
+                    else
+                        spellId1 = 61261;                   // Frost Presence, stamina
+                    break;
+                }
+            }
+
+            // Improved Blood Presence
+            if (GetSpellProto()->SpellIconID == 2632 && GetModifier()->m_auraname==SPELL_AURA_DUMMY)
+            {
+                // if presence active: Frost Presence or Unholy Presence
+                if (apply && (m_target->HasAura(48263) || m_target->HasAura(48265)))
+                {
+                    int32 bp = GetModifier()->m_amount;
+                    m_target->CastCustomSpell(m_target, 63611, &bp, NULL, NULL, true, NULL, this);
+                }
+                else
+                    m_target->RemoveAurasDueToSpell(63611);
+                return;
+            }
+
+            // Improved Frost Presence
+            if (GetSpellProto()->SpellIconID == 2636 && GetModifier()->m_auraname==SPELL_AURA_DUMMY)
+            {
+                // if presence active: Unholy Presence or Blood Presence
+                if (apply && (m_target->HasAura(48265) || m_target->HasAura(48266)))
+                {
+                    int32 bp = GetModifier()->m_amount;
+                    m_target->CastCustomSpell(m_target, 61261, &bp, NULL, NULL, true, NULL, this);
+                }
+                else
+                    m_target->RemoveAurasDueToSpell(61261);
+                return;
+            }
+
+            // Improved Unholy Presence
+            if (GetSpellProto()->SpellIconID == 2633 && GetModifier()->m_auraname==SPELL_AURA_DUMMY)
+            {
+                // if presence active: Frost Presence or Blood Presence
+                if (apply && (m_target->HasAura(48263) || m_target->HasAura(48266)))
+                {
+                    int32 bp = GetModifier()->m_amount;
+                    m_target->CastCustomSpell(m_target, 61261, &bp, NULL, NULL, true, NULL, this);
+
+                    spellId1 = 49772;
+                }
+                else
+                {
+                    m_target->RemoveAurasDueToSpell(61261);
+
+                    if (!apply)
+                        spellId1 = 49772;
+                    else
+                        return;
+                }
+                break;
             }
             break;
         }

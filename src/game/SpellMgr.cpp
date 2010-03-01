@@ -1733,6 +1733,10 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
                 // Ghost Wolf
                 if (spellInfo_1->SpellIconID == 67 && spellInfo_2->SpellIconID == 67)
                     return false;
+
+                // Totem of Wrath (positive/negative), ranks checked early
+                if (spellInfo_1->SpellIconID == 2019 && spellInfo_2->SpellIconID == 2019)
+                    return false;
             }
             // Bloodlust and Bloodthirst (multi-family check)
             if( spellInfo_1->Id == 2825 && spellInfo_2->SpellIconID == 38 && spellInfo_2->SpellVisual[0] == 0 )
@@ -1742,15 +1746,19 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
             if (spellInfo_2->SpellFamilyName == SPELLFAMILY_DEATHKNIGHT)
             {
                 // Lichborne  and Lichborne (triggered)
-                if( spellInfo_1->SpellIconID == 61 && spellInfo_2->SpellIconID == 61 )
+                if (spellInfo_1->SpellIconID == 61 && spellInfo_2->SpellIconID == 61)
                     return false;
 
                 // Frost Presence and Frost Presence (triggered)
-                if( spellInfo_1->SpellIconID == 2632 && spellInfo_2->SpellIconID == 2632 )
+                if (spellInfo_1->SpellIconID == 2632 && spellInfo_2->SpellIconID == 2632)
                     return false;
 
                 // Unholy Presence and Unholy Presence (triggered)
-                if( spellInfo_1->SpellIconID == 2633 && spellInfo_2->SpellIconID == 2633 )
+                if (spellInfo_1->SpellIconID == 2633 && spellInfo_2->SpellIconID == 2633)
+                    return false;
+
+                // Blood Presence and Blood Presence (triggered)
+                if (spellInfo_1->SpellIconID == 2636 && spellInfo_2->SpellIconID == 2636)
                     return false;
             }
             break;
