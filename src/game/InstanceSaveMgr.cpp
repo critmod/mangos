@@ -101,12 +101,21 @@ InstanceSave* InstanceSaveManager::AddInstanceSave(uint32 mapId, uint32 instance
         // initialize reset time
         // for normal instances if no creatures are killed the instance will reset in two hours
         if(entry->map_type == MAP_RAID || difficulty > DUNGEON_DIFFICULTY_NORMAL)
-        {
 			resetTime = GetResetTimeFor(mapId,difficulty);		
-        }
-		if(entry->map_type == MAP_RAID || difficulty > DUNGEON_DIFFICULTY_HEROIC)
+        else
         {
-            resetTime = GetResetTimeFor(mapId,difficulty);         
+            resetTime = time(NULL) + 2 * HOUR;
+            // normally this will be removed soon after in InstanceMap::Add, prevent error
+            ScheduleReset(true, resetTime, InstResetEvent(0, mapId, difficulty, instanceId));
+        }
+
+		if(entry->map_type == MAP_RAID || difficulty > DUNGEON_DIFFICULTY_HEROIC)
+			resetTime = GetResetTimeFor(mapId,difficulty);		
+        else
+        {
+            resetTime = time(NULL) + 2 * HOUR;
+            // normally this will be removed soon after in InstanceMap::Add, prevent error
+            ScheduleReset(true, resetTime, InstResetEvent(0, mapId, difficulty, instanceId));
         }
     }
 
@@ -641,14 +650,13 @@ void InstanceSaveManager::_ResetOrWarnAll(uint32 mapid, Difficulty difficulty, b
 
         // calculate the next reset time
         uint32 diff = sWorld.getConfig(CONFIG_UINT32_INSTANCE_RESET_TIME_HOUR) * HOUR;
-        uint32 period = (mapDiff->resetTime / DAY * sWorld.getConfig(CONFIG_UINT32_INSTANCE_RESET_TIME_HOUR)) * DAY;
+        //uint32 period = (mapDiff->resetTime / DAY * sWorld.getConfig(CONFIG_UINT32_INSTANCE_RESET_TIME_HOUR)) * DAY;
+		uint32 period = mapDiff->resetTime * DAY;
         if (period < DAY)
 			period = DAY;
-		time_t next_reset = ((now + timeLeft + MINUTE) / DAY * DAY) + period + diff;
-        //time_t next_reset = ((now + timeLeft + MINUTE) / DAY * DAY) + period + diff;
-		//uint64 next_reset = ((now + timeLeft + MINUTE) / DAY * DAY) + period + diff;
-        SetResetTimeFor(mapid,difficulty,(uint64)next_reset);
-        ScheduleReset(true, time_t(next_reset-3600), InstResetEvent(1, mapid, difficulty, -1));
+        time_t next_reset = ((now + timeLeft + MINUTE) / DAY * DAY) + period + diff;
+        /*SetResetTimeFor(mapid,difficulty,(uint64)next_reset);
+        ScheduleReset(true, time_t(next_reset-3600), InstResetEvent(1, mapid, difficulty, -1));*/
         // update it in the DB
         CharacterDatabase.PExecute("UPDATE instance_reset SET resettime = '"UI64FMTD"' WHERE mapid = '%d' AND difficulty = '%d'", (uint64)next_reset, mapid, difficulty);
     }
